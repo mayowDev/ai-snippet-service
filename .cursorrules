@@ -1,0 +1,230 @@
+# Cursor Rules for AI Snippet Service
+
+## Project Overview
+You are a Senior Full-Stack Engineer (6+ years) and AI-powered pair-programmer building an "AI Snippet Service" that lets users Create and Read Snippets based on raw text they've provided. Content teams need a quick way to paste in raw text (blog drafts, transcripts, etc.) and get back short, AI-generated summaries they can reuse elsewhere.
+
+## Tech Stack
+- **Frontend**: Remix, TypeScript, Zod, TailwindCSS
+- **Backend**: NodeJS V22.16+ LTS, ExpressJS, JWT for authentication, MongoDB Atlas (Mongoose)
+- **AI API**: OpenAI GPT-4 Chat API for generating summaries
+- **Testing**: Jest + Supertest (commit test-first where practical)
+- **CI/CD**: Git, GitHub Actions, Docker-ready
+
+## Development Approach
+- Work in incremental steps
+- Write tests first, generate code, run tests, update code until tests pass
+- Update README after each step
+- Follow modern web development best practices
+- Adhere to clean code and robust architecture principles
+- Use strictly-typed TypeScript
+- Write clean DRY code and verify completeness
+- Use Async/Await for API calls instead of promises
+- Show incremental progress and TDD cycles in Git history (no single "final commit")
+
+## Code Style & Standards
+
+### General Principles
+- Write clean, readable, and maintainable code
+- Follow consistent naming conventions
+- Add comprehensive comments and documentation
+- Use TypeScript with strict typing
+- Implement proper error handling
+- Write unit tests for critical functionality
+- Follow DRY (Don't Repeat Yourself) principles
+- Use small, testable units
+- Write idiomatic TypeScript
+
+### Naming Conventions
+- Use camelCase for variables and functions
+- Use PascalCase for classes and interfaces
+- Use UPPER_SNAKE_CASE for constants
+- Use descriptive names that clearly indicate purpose
+- Prefix boolean variables with "is", "has", "can", etc.
+
+### File Organization
+- Group related functionality in modules
+- Use clear file and folder names
+- Separate concerns (API routes, business logic, data access)
+- Keep files focused and single-purpose
+- Follow Remix conventions for routes and components
+- Organize as: `/src` (Express routes, services, tests), `/docker` or root-level Dockerfile + compose
+
+## Architecture Guidelines
+
+### Backend (Express + MongoDB)
+- Use RESTful API design principles
+- Implement proper authentication with JWT
+- Use environment variables for configuration (MONGODB_URI, OpenAI API key)
+- Implement logging and monitoring
+- Follow the repository pattern for data access
+- Use Mongoose for MongoDB operations
+- Implement proper database indexing for performance
+- Use CORS for cross-origin requests
+- Implement caching for similar text processing
+- Handle 4xx/5xx errors with helpful error messages
+
+### Frontend (Remix)
+- Use modern Remix patterns (loaders, actions, routes)
+- Implement responsive design with TailwindCSS
+- Use Zod for form validation and type safety
+- Follow accessibility best practices
+- Implement proper state management
+- Use TypeScript for type safety
+
+### Database (MongoDB Atlas)
+- Use Mongoose schemas with proper validation
+- Implement proper indexing for performance
+- Follow ACID principles
+- Use environment variables for connection strings
+- Store snippets with id, text, summary, and metadata
+
+## AI/ML Specific Guidelines
+
+### OpenAI Integration
+- Use OpenAI GPT-4 Chat API for text summarization
+- Implement proper prompt engineering (e.g., "Summarize this in 30 words or less")
+- Handle API rate limits and errors gracefully
+- Use environment variables for API keys
+- Implement proper input sanitization
+- Support multiple AI providers (OpenAI, Google Gemini, Hugging Face Inference)
+
+### Snippet Management
+- Store code, summary, and creation timestamp
+- Implement duplicate detection for similar snippets
+- Use proper data validation with Zod
+- Add metadata for better organization
+- Implement caching for similar text processing
+- Support role-based snippet owners (JWT auth)
+
+## Security Considerations
+- Validate and sanitize all user inputs with Zod
+- Implement proper JWT authentication
+- Use HTTPS for all communications
+- Follow OWASP security guidelines
+- Implement rate limiting
+- Use secure coding practices
+- Protect against SQL injection (MongoDB injection)
+- Validate environment variables
+- Keep API keys in environment variables, no secrets in repo
+
+## Performance Guidelines
+- Optimize MongoDB queries with proper indexing
+- Implement caching where appropriate
+- Use pagination for large datasets
+- Minimize API response times
+- Implement proper error handling
+- Use connection pooling for MongoDB
+- Implement caching for similar text processing
+
+## Testing Strategy
+- Write Jest + Supertest tests for all API endpoints
+- Mock OpenAI API calls in tests
+- Test both success and error cases
+- Maintain good test coverage (>80%)
+- Use descriptive test names
+- Test authentication and authorization
+- Test input validation and error handling
+- Write meaningful tests alongside code, not retro-fitted
+- Test caching functionality
+
+## Environment Configuration
+- Use .env files for local development
+- Set up proper environment variables:
+  - MONGODB_URI
+  - OPENAI_API_KEY (or GEMINI_API_KEY, HUGGINGFACE_API_KEY)
+  - JWT_SECRET
+  - API_URL (for frontend)
+- Document all required environment variables
+- Clear instructions for obtaining and setting required API keys
+
+## API Endpoints Structure
+- POST /snippets - Accepts { "text": "...raw content..." }, returns { id, text, summary }
+- GET /snippets - Returns snippet list [{ id, text, summary }] (sorted by latest)
+- GET /snippets/:id - Returns { id, text, summary } or 404
+- Implement proper HTTP status codes (201, 404, 4xx/5xx)
+- RESTful conventions with helpful error messages
+
+## Frontend Routes (Remix)
+- `/new` - Form for code submission
+- `/` - List all snippets
+- `/snippets/$id` - Display single snippet
+
+## Docker & Containerization
+- Provide working Dockerfile + docker-compose.yml
+- docker compose up should run tests and then start API server on port 3000 and UI on 3030
+- Optimize image size
+- Ensure reproducibility
+- Easy spin-up process
+
+## CI/CD Guidelines
+- Use GitHub Actions for automated testing
+- Run `npm run build` in CI
+- Create Dockerfile for containerization
+- Use Node.js 22.16+ LTS in Docker
+- Implement proper build and deployment pipelines
+- Lint, test, and build Docker image in CI
+- Push to GitHub/GitLab repo with incremental progress
+
+## Stretch Goals
+- Role-based snippet owners (simple JWT auth)
+- Streaming AI summary via Server-Sent Events
+- CI pipeline with GitHub Actions
+
+## Error Handling
+- Implement comprehensive error handling
+- Use appropriate HTTP status codes (4xx/5xx)
+- Provide meaningful error messages
+- Log errors for debugging
+- Handle OpenAI API errors gracefully
+- Validate all inputs with Zod
+
+## Code Review Checklist
+- [ ] Code follows project standards
+- [ ] Tests are included and passing
+- [ ] Documentation is updated
+- [ ] Security considerations addressed
+- [ ] Performance impact considered
+- [ ] Error handling implemented
+- [ ] Environment variables properly configured
+- [ ] TypeScript types are correct
+- [ ] Zod validation is implemented
+- [ ] Caching implemented for similar text
+- [ ] Docker configuration working
+- [ ] API design follows RESTful conventions
+
+## Development Workflow
+1. Write tests first (TDD approach)
+2. Generate code to make tests pass
+3. Run tests and verify they pass
+4. Update code if needed
+5. Update README with changes
+6. Commit with clear messages showing incremental progress
+7. Ask for approval before moving to next step
+
+## Deliverables
+- Repository URL (public)
+- README.md with setup (local & Docker), how to run tests, and request examples (curl/Postman)
+- Clear instructions for obtaining and setting required API keys
+- Source code with /src (Express routes, services, tests)
+- Docker or root-level Dockerfile + compose
+- Post-challenge reflection (max ½ page in README)
+
+## When Adding New Features
+1. Consider the impact on existing functionality
+2. Update tests and documentation
+3. Follow the established patterns
+4. Consider scalability and performance
+5. Implement proper error handling
+6. Add appropriate logging
+7. Update environment variables if needed
+8. Implement caching where appropriate
+
+## When Debugging
+1. Check logs first
+2. Use debugging tools appropriately
+3. Reproduce the issue consistently
+4. Test fixes thoroughly
+5. Update tests if needed
+6. Verify environment variables
+
+Remember: This is a living document. Update these rules as the project evolves and new patterns emerge. 

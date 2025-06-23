@@ -25,6 +25,37 @@ The goal is to provide a seamless full-stack developer experience, with shared t
 - **RESTful API**: Clean, well-documented endpoints
 - **Docker Support**: Containerized deployment with test-first approach
 
+## Frontend Implementation (Remix, TailwindCSS, Zod, and More)
+
+- The frontend is implemented in the `/frontend` directory using:
+  - **Remix** (with Vite) for modern React routing and SSR
+  - **React** 18
+  - **TypeScript** for strict typing
+  - **TailwindCSS** for utility-first styling
+  - **Zod** for schema validation
+  - **Cypress** for E2E testing
+  - **Vite** for fast dev/build
+  - **ESLint** and **Prettier** for code quality
+  - **@remix-run/node/react/serve/dev** for full-stack features
+  - See `frontend/package.json` for all dependencies
+- The frontend currently supports:
+  - Creating snippets and summaries via the main `/` route
+  - Listing recent snippets below the form
+  - Responsive, accessible UI with TailwindCSS
+  - (Planned) E2E and TDD tests (see bottlenecks section)
+
+## MongoDB Downtime Handling, Guest Fallback, and Testing Limitations
+
+- The API now supports a fallback mode if MongoDB is down:
+  - Cached snippets are served for GET requests if available.
+  - If the database is unavailable, users can use `guest@example.com` to create new AI summaries, which are stored in memory (not persisted).
+- **Bottlenecks faced:**
+  - Most API write/auth routes require a working database, so fallback is limited to guest/demo mode.
+  - End-to-end (e2e) tests and frontend TDD could not be fully implemented due to time constraints and the dependency on a live database connection.
+  - If MongoDB is down, e2e tests that require DB access will fail.
+- **Guest fallback:**
+  - If the DB is down, users can use `guest@example.com` to access the main AI summary functionality and create snippets (in-memory only).
+
 ## Tech Stack
 
 - **Runtime**: Node.js 22.16+ LTS
@@ -359,15 +390,21 @@ The application automatically creates a test database by appending `-test` to yo
 - [x] Updated API responses to include user information
 - [x] Wrote comprehensive tests for authentication and rate limiting
 
+### ✅ Step 7: Frontend Implementation
+
+- [x] Scaffolded Remix app in `/frontend`
+- [x] Integrated TailwindCSS, Zod, TypeScript, React
+- [x] Implemented snippet creation and listing UI
+- [x] Added Cypress and Vitest for testing (TDD/E2E planned)
+- [x] Connected to backend API for AI summaries
+
 ### 🔄 Next Steps
 
-- [ ] **Monorepo Migration:** Move backend code to `/apps/backend`
-- [ ] **Initialize Remix Frontend:** Create `/apps/frontend` with Remix
+- [ ] **Monorepo Migration:** Move backend code to `/backend` (from `/src`)
+- [ ] **Create root `package.json`:** For running both apps concurrently (e.g., with `concurrently` or `npm workspaces`)
 - [ ] **Shared Types/Utils:** Set up shared code between backend and frontend
 - [ ] **Update CI/CD:** Build/test/deploy both apps in GitHub Actions
 - [ ] **Docker Compose:** Add frontend service to Docker setup
-- [ ] **Frontend Features:** Build UI for snippet creation, listing, and user status
-- [ ] **Styling:** Add TailwindCSS to the frontend
 - [ ] **Docs:** Update documentation for monorepo and full-stack usage
 
 ## Testing
@@ -472,32 +509,12 @@ The test database is automatically created and cleaned up after each test run.
 ## Project Structure
 
 ```
-src/
-├── index.js              # Main server file
-├── __tests__/
-│   ├── setup.js          # Test configuration
-│   ├── server.test.js    # Server tests
-│   ├── snippet.model.test.js # Model tests
-│   ├── user.model.test.js # User model tests
-│   ├── ai.service.test.js # AI service tests
-│   └── snippets.routes.test.js # Route tests
-├── models/
-│   ├── snippet.js        # Mongoose Snippet model
-│   └── user.js           # Mongoose User model
-├── routes/
-│   └── snippets.js       # Express routes
-├── services/
-│   └── ai.js             # AI service
-└── middleware/
-    ├── validation.js     # Zod validation
-    └── rateLimit.js      # Rate limiting and authentication
-
-Docker/
-├── Dockerfile            # Production image
-├── Dockerfile.dev        # Development image
-├── docker-compose.yml    # Multi-service orchestration
-├── docker-start.sh       # Startup script
-└── .dockerignore         # Build optimization
+src/                  # Backend (to be moved to /backend)
+frontend/             # Remix frontend app
+  app/                # Remix routes and components
+  ...                 # Frontend config, tests, etc.
+Docker/               # Docker and compose files
+...                   # Root-level config
 ```
 
 ## Contributing
@@ -511,13 +528,3 @@ Docker/
 ## License
 
 MIT
-
-## Frontend (Coming Soon)
-
-A Remix-based frontend will be added to this monorepo. It will provide:
-
-- A modern UI for creating and viewing AI-generated snippets
-- User status and quota management
-- Integration with the backend API
-
-Stay tuned!

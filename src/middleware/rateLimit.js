@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+
 const rateLimit = require("express-rate-limit");
 const User = require("../models/user");
 
@@ -56,6 +58,22 @@ const userRateLimiter = rateLimit({
  * Middleware to check user quota before processing request
  */
 const checkUserQuota = async (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    // Allow guest@example.com to pass if DB is down
+    if (req.user && req.user.email === "guest@example.com") {
+      req.userInfo = {
+        id: "guest",
+        email: "guest@example.com",
+        summariesCreated: 0,
+        remainingSummaries: Infinity,
+        isProUser: false,
+      };
+      return next();
+    }
+    return res.status(503).json({
+      error: "User quota service unavailable. Please try again later.",
+    });
+  }
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -128,7 +146,19 @@ const authenticateUser = async (req, res, next) => {
       });
     }
 
-    console.log("authenticateUser: Finding/creating user for email:", email);
+    // Fallback: allow guest@example.com if DB is down
+    if (mongoose.connection.readyState !== 1) {
+      if (email === "guest@example.com") {
+        req.user = {
+          id: "guest",
+          email: "guest@example.com",
+        };
+        return next();
+      }
+      return res.status(503).json({
+        error: "Authentication service unavailable. Please try again later.",
+      });
+    }
     // Find or create user
     const user = await User.findOrCreateByEmail(email);
 
@@ -138,7 +168,6 @@ const authenticateUser = async (req, res, next) => {
       email: user.email,
     };
 
-    console.log("authenticateUser: User authenticated successfully:", req.user);
     next();
   } catch (error) {
     console.error("Error authenticating user:", error);

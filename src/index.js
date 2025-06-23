@@ -5,6 +5,8 @@ const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+let mongoConnected = false;
+let snippetCache = [];
 
 // Import routes
 const snippetRoutes = require("./routes/snippets");
@@ -17,6 +19,7 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
+    dbConnected: mongoConnected,
     message: "AI Snippet Service is running",
     timestamp: new Date().toISOString(),
   });
@@ -53,10 +56,12 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(process.env.MONGODB_URI);
+    mongoConnected = true;
     console.log("MongoDB connected successfully");
   } catch (error) {
+    mongoConnected = false;
     console.error("MongoDB connection error:", error.message);
-    process.exit(1);
+    // process.exit(1);
   }
 };
 
@@ -64,7 +69,6 @@ const connectDB = async () => {
 const startServer = async () => {
   try {
     await connectDB();
-
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

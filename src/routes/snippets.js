@@ -20,7 +20,7 @@ const router = express.Router();
 
 // Apply API rate limiting to all routes
 router.use(apiRateLimiter);
-
+let snippetCache = [];
 // POST /snippets - Create a new snippet with AI summary
 router.post(
   "/",
@@ -29,11 +29,55 @@ router.post(
   checkUserQuota, // Check if user has remaining summaries
   validateBody(createSnippetSchema),
   async (req, res) => {
-    console.log("POST /snippets called with body:", req.body);
+    console.log("POST /snippets called with body:");
     try {
       const { text } = req.body;
       const userInfo = req.userInfo; // From checkUserQuota middleware
 
+      // Fallback: If MongoDB is down, create snippet in cache only
+      if (mongoose.connection.readyState !== 1) {
+        // Check for duplicate in cache
+        const existingSnippet = snippetCache.find(s => s.text.trim() === text.trim());
+        if (existingSnippet) {
+          return res.status(200).json({
+            id: existingSnippet._id || existingSnippet.id,
+            text: existingSnippet.text,
+            summary: existingSnippet.summary,
+            userInfo: {
+              email: userInfo.email,
+              summariesCreated: userInfo.summariesCreated,
+              remainingSummaries: userInfo.remainingSummaries,
+              isProUser: userInfo.isProUser,
+            },
+          });
+        }
+        // Generate AI summary
+        const summary = await summarize(text);
+        // Create a fake _id and createdAt for cache
+        const fakeId = `cache_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const snippet = {
+          _id: fakeId,
+          text: text.trim(),
+          summary,
+          createdBy: userInfo.id,
+          createdAt: new Date(),
+        };
+        snippetCache.unshift(snippet);
+        if (snippetCache.length > 100) snippetCache.pop();
+        return res.status(201).json({
+          id: snippet._id,
+          text: snippet.text,
+          summary: snippet.summary,
+          userInfo: {
+            email: userInfo.email,
+            summariesCreated: userInfo.summariesCreated,
+            remainingSummaries: userInfo.remainingSummaries,
+            isProUser: userInfo.isProUser,
+          },
+        });
+      }
+
+      // Normal DB logic
       // Check if similar snippet already exists (simple text comparison for now)
       const existingSnippet = await Snippet.findOne({ text: text.trim() });
       if (existingSnippet) {
@@ -71,6 +115,10 @@ router.post(
         },
         { new: true }
       );
+      snippetCache.unshift(savedSnippet)//Add to the start of the cache
+      if (snippetCache.length > 100) {
+        snippetCache.pop(); // Remove the last item if cache is too large
+      }
 
       res.status(201).json({
         id: savedSnippet._id,
@@ -108,6 +156,13 @@ router.post(
 
 // GET /snippets - Get all snippets sorted by latest
 router.get("/", async (req, res) => {
+  // Check if MongoDB is connected
+  if (mongoose.connection.readyState !== 1) {
+    if (snippetCache.length > 0) {
+      return res.json(snippetCache);
+    }
+    return res.status(503).json({ error: "Database unavailable and no cache." });
+  }
   try {
     const snippets = await Snippet.find()
       .populate("createdBy", "email") // Populate user email
@@ -121,6 +176,7 @@ router.get("/", async (req, res) => {
       createdAt: snippet.createdAt,
       createdBy: snippet.createdBy ? snippet.createdBy.email : null,
     }));
+    snippetCache = formattedSnippets; // update cache
 
     res.json(formattedSnippets);
   } catch (error) {
@@ -134,6 +190,13 @@ router.get("/", async (req, res) => {
 
 // GET /snippets/:id - Get a single snippet by ID
 router.get("/:id", validateParams(snippetIdSchema), async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    const cached = snippetCache.find(s => s._id.toString() === req.params.id);
+    if (cached) {
+      return res.json(cached);
+    }
+    return res.status(503).json({ error: "Database unavailable and not in cache." });
+  }
   try {
     const { id } = req.params;
 
