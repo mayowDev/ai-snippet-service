@@ -1,60 +1,6 @@
-# AI Snippet Service - Backend
+# AI Snippet Service
 
 A Node.js Express API service that generates AI-powered summaries from raw text content with user authentication, rate limiting, and quota management.
-
-## Monorepo & Frontend Roadmap
-
-This project is evolving into a monorepo that will include:
-
-- **Backend**: The current Node.js/Express API (in `src/` or `/apps/backend`)
-- **Frontend**: A new Remix-based web app (to be added in `/apps/frontend`)
-
-The goal is to provide a seamless full-stack developer experience, with shared types, unified CI/CD, and easy local development.
-
-**Next steps:** See the roadmap below!
-
-## Features
-
-- **Create Snippets**: POST raw text and get AI-generated summaries
-- **Read Snippets**: Retrieve individual snippets by ID
-- **List Snippets**: Get all snippets sorted by creation date with creator information
-- **User Authentication**: Simple email-based authentication system
-- **Rate Limiting**: API and user-level rate limiting to prevent abuse
-- **Quota Management**: Free tier limits (5 summaries per user) with pro user support
-- **Caching**: Avoid duplicate AI processing for similar text
-- **RESTful API**: Clean, well-documented endpoints
-- **Docker Support**: Containerized deployment with test-first approach
-
-## Frontend Implementation (Remix, TailwindCSS, Zod, and More)
-
-- The frontend is implemented in the `/frontend` directory using:
-  - **Remix** (with Vite) for modern React routing and SSR
-  - **React** 18
-  - **TypeScript** for strict typing
-  - **TailwindCSS** for utility-first styling
-  - **Zod** for schema validation
-  - **Cypress** for E2E testing
-  - **Vite** for fast dev/build
-  - **ESLint** and **Prettier** for code quality
-  - **@remix-run/node/react/serve/dev** for full-stack features
-  - See `frontend/package.json` for all dependencies
-- The frontend currently supports:
-  - Creating snippets and summaries via the main `/` route
-  - Listing recent snippets below the form
-  - Responsive, accessible UI with TailwindCSS
-  - (Planned) E2E and TDD tests (see bottlenecks section)
-
-## MongoDB Downtime Handling, Guest Fallback, and Testing Limitations
-
-- The API now supports a fallback mode if MongoDB is down:
-  - Cached snippets are served for GET requests if available.
-  - If the database is unavailable, users can use `guest@example.com` to create new AI summaries, which are stored in memory (not persisted).
-- **Bottlenecks faced:**
-  - Most API write/auth routes require a working database, so fallback is limited to guest/demo mode.
-  - End-to-end (e2e) tests and frontend TDD could not be fully implemented due to time constraints and the dependency on a live database connection.
-  - If MongoDB is down, e2e tests that require DB access will fail.
-- **Guest fallback:**
-  - If the DB is down, users can use `guest@example.com` to access the main AI summary functionality and create snippets (in-memory only).
 
 ## Tech Stack
 
@@ -110,7 +56,42 @@ JWT_SECRET=your-jwt-secret-here
 API_URL=http://localhost:3000
 ```
 
-### 3. Run with Docker (Recommended)
+### 3. Getting API Keys
+
+\*At least one AI provider API key is required
+
+### Google Gemini API Key (Recommended - Free Tier)
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the key to your `.env` file
+
+### OpenAI API Key
+
+1. Visit [OpenAI Platform](https://platform.openai.com/)
+2. Create an account or sign in
+3. Navigate to API Keys section
+4. Create a new API key
+5. Copy the key to your `.env` file
+
+### Hugging Face API Key
+
+1. Visit [Hugging Face](https://huggingface.co/)
+2. Create an account or sign in
+3. Go to Settings > Access Tokens
+4. Create a new token
+5. Copy the token to your `.env` file
+
+### MongoDB Atlas (Detailed Setup below)
+
+1. Follow the MongoDB Atlas setup instructions below
+2. Create a free cluster
+3. Set up database user and network access
+4. Get your connection string
+5. Replace username/password in the connection string
+
+### 4. Run with Docker (Recommended)
 
 **Option A: Use the startup script (runs tests first)**
 
@@ -134,7 +115,7 @@ docker-compose up api --build -d
 docker-compose up --build
 ```
 
-### 4. Verify Installation
+### 5. Verify Installation
 
 - **API Health Check**: http://localhost:3000/health
 - **API Documentation**: See API Endpoints section below
@@ -157,7 +138,7 @@ Copy the example environment file and configure your variables:
 cp env.example .env
 ```
 
-Edit `.env` with your actual values (see Docker section above).
+Edit `.env` with your actual values (see Getting API Keys in Docker section above).
 
 ### 3. Running the Application
 
@@ -283,7 +264,70 @@ The application automatically creates a test database by appending `-test` to yo
 - Development database: `ai-snippet-service`
 - Test database: `ai-snippet-service-test`
 
-## API Endpoints
+## API Endpoints & Request Examples (curl & Postman)
+
+### Create a Snippet (POST /snippets)
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:3000/snippets \
+  -H "Content-Type: application/json" \
+  -d '{"text": "This is a long blog post that needs a summary.", "email": "user@example.com"}'
+```
+
+**Postman:**
+
+- Method: POST
+- URL: http://localhost:3000/snippets
+- Body (JSON):
+  ```json
+  {
+    "text": "This is a long blog post that needs a summary.",
+    "email": "user@example.com"
+  }
+  ```
+
+### List All Snippets (GET /snippets)
+
+**curl:**
+
+```bash
+curl http://localhost:3000/snippets
+```
+
+**Postman:**
+
+- Method: GET
+- URL: http://localhost:3000/snippets
+
+### Get a Snippet by ID (GET /snippets/:id)
+
+**curl:**
+
+```bash
+curl http://localhost:3000/snippets/<snippet_id>
+```
+
+**Postman:**
+
+- Method: GET
+- URL: http://localhost:3000/snippets/<snippet_id>
+
+### Get User Status (GET /snippets/user/status)
+
+**curl:**
+
+```bash
+curl "http://localhost:3000/snippets/user/status?email=user@example.com"
+```
+
+**Postman:**
+
+- Method: GET
+- URL: http://localhost:3000/snippets/user/status?email=user@example.com
+
+---
 
 ### Health Check
 
@@ -447,41 +491,6 @@ The test database is automatically created and cleaned up after each test run.
 | `JWT_SECRET`          | JWT signing secret              | No       | default-jwt-secret           |
 | `API_URL`             | Frontend API URL                | No       | http://localhost:3000        |
 
-\*At least one AI provider API key is required
-
-## Getting API Keys
-
-### Google Gemini API Key (Recommended - Free Tier)
-
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the key to your `.env` file
-
-### OpenAI API Key
-
-1. Visit [OpenAI Platform](https://platform.openai.com/)
-2. Create an account or sign in
-3. Navigate to API Keys section
-4. Create a new API key
-5. Copy the key to your `.env` file
-
-### Hugging Face API Key
-
-1. Visit [Hugging Face](https://huggingface.co/)
-2. Create an account or sign in
-3. Go to Settings > Access Tokens
-4. Create a new token
-5. Copy the token to your `.env` file
-
-### MongoDB Atlas (Detailed Setup Above)
-
-1. Follow the MongoDB Atlas setup instructions above
-2. Create a free cluster
-3. Set up database user and network access
-4. Get your connection string
-5. Replace username/password in the connection string
-
 ## Troubleshooting
 
 ### Docker Issues
@@ -516,6 +525,70 @@ frontend/             # Remix frontend app
 Docker/               # Docker and compose files
 ...                   # Root-level config
 ```
+
+## Features
+
+- **Create Snippets**: POST raw text and get AI-generated summaries
+- **Read Snippets**: Retrieve individual snippets by ID
+- **List Snippets**: Get all snippets sorted by creation date with creator information
+- **User Authentication**: Simple email-based authentication system
+- **Rate Limiting**: API and user-level rate limiting to prevent abuse
+- **Quota Management**: Free tier limits (5 summaries per user) with pro user support
+- **Caching**: Avoid duplicate AI processing for similar text
+- **RESTful API**: Clean, well-documented endpoints
+- **Docker Support**: Containerized deployment with test-first approach
+
+## Frontend Implementation (Remix, TailwindCSS, Zod, and More)
+
+- The frontend is implemented in the `/frontend` directory using:
+  - **Remix** (with Vite) for modern React routing and SSR
+  - **React** 18
+  - **TypeScript** for strict typing
+  - **TailwindCSS** for utility-first styling
+  - **Zod** for schema validation
+  - **Cypress** for E2E testing
+  - **Vite** for fast dev/build
+  - **ESLint** and **Prettier** for code quality
+  - **@remix-run/node/react/serve/dev** for full-stack features
+  - See `frontend/package.json` for all dependencies
+- The frontend currently supports:
+  - Creating snippets and summaries via the main `/` route
+  - Listing recent snippets below the form
+  - Responsive, accessible UI with TailwindCSS
+  - (Planned) E2E and TDD tests (see bottlenecks section)
+
+## Issues faced: MongoDB Downtime Handling, Guest Fallback, and Testing Limitations
+
+- The API now supports a fallback mode if MongoDB is down:
+  - Cached snippets are served for GET requests if available.
+  - If the database is unavailable, users can use `guest@example.com` to create new AI summaries, which are stored in memory (not persisted).
+- **Bottlenecks faced:**
+  - Most API write/auth routes require a working database, so fallback is limited to guest/demo mode.
+  - End-to-end (e2e) tests and frontend TDD could not be fully implemented due to time constraints and the dependency on a live database connection.
+  - If MongoDB is down, e2e tests that require DB access will fail.
+- **Guest fallback:**
+  - If the DB is down, users can use `guest@example.com` to access the main AI summary functionality and create snippets (in-memory only).
+
+## Post-Challenge Reflection
+
+**What I'd improve with more time:**
+
+- Complete the monorepo migration: move backend to `/backend`, set up a root `package.json` for concurrent dev, and enable shared types/utils.
+- Implement full TDD and E2E coverage for the frontend (Remix) and backend, including CI/CD for both apps.
+- Add persistent caching (e.g., Redis) for better fallback and scalability.
+- Add user authentication with JWT and role-based access for more robust security.
+- Improve error handling and user feedback in the frontend.
+- Add pagination, search, and filtering for snippets.
+- Polish the UI/UX and add accessibility improvements.
+
+**Trade-offs made:**
+
+- Fallback logic for MongoDB downtime is in-memory only (not persistent, not distributed).
+- Guest mode is enabled for demo purposes, but not suitable for production security.
+- E2E and TDD for the frontend were limited by time and DB dependency.
+- Some advanced features (streaming summaries, role-based access, etc.) were left as time didn't allow.
+
+---
 
 ## Contributing
 
