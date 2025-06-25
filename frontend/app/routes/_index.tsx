@@ -17,6 +17,9 @@ import type { Snippet, ActionData } from "../types/types";
 // Lazy load components for better performance
 const SnippetList = lazy(() => import("../components/SnippetList"));
 const CreateSnippetForm = lazy(() => import("../components/CreateSnippetForm"));
+const apiUrl = typeof window !== "undefined"
+  ? import.meta.env.VITE_API_URL
+  : process.env.VITE_API_URL;
 
 const createSnippetSchema = z.object({
   text: z
@@ -56,9 +59,9 @@ function LoadingSpinner() {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  try {
+    try {
     const response = await fetch(
-      `${process.env.API_URL || "http://localhost:3000"}/snippets`,
+      `${apiUrl}/snippets`,
       {
         // Add cache control for better performance
         headers: {
@@ -97,7 +100,7 @@ export async function action({ request }: ActionFunctionArgs) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: validatedData.text }),
+        body: JSON.stringify({email: validatedData.email, text: validatedData.text }),
       }
     );
 
