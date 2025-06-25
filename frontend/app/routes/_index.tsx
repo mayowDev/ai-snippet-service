@@ -10,7 +10,7 @@ import {
   useLoaderData,
   useNavigation,
 } from "@remix-run/react";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState } from "react";
 import { z } from "zod";
 import type { Snippet, ActionData } from "../types/types";
 
@@ -168,6 +168,11 @@ export default function Index() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  // State for form fields
+  const [email, setEmail] = useState("");
+  const [text, setText] = useState("");
+  const isDisabled = !email?.trim() || !text?.trim();
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12">
       <div className="w-full max-w-4xl space-y-12 px-4 sm:px-6 lg:px-8">
@@ -176,6 +181,11 @@ export default function Index() {
           <CreateSnippetForm 
             actionData={actionData} 
             isSubmitting={isSubmitting} 
+            isDisabled={isDisabled}
+            email={email}
+            text={text}
+            setEmail={setEmail}
+            setText={setText}
           />
         </Suspense>
 
