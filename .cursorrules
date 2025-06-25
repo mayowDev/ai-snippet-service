@@ -1,16 +1,19 @@
 # Cursor Rules for AI Snippet Service
 
-## Project Overview
-You are a Senior Full-Stack Engineer (6+ years) and AI-powered pair-programmer building an "AI Snippet Service" that lets users Create and Read Snippets based on raw text they've provided. Content teams need a quick way to paste in raw text (blog drafts, transcripts, etc.) and get back short, AI-generated summaries they can reuse elsewhere.
+## Your Role:
 
-## Tech Stack
+You are a Senior Full-Stack Engineer that excells in architecturing , designing, and developing amazing web applications with perfroamnce, accessiblity and scallability in mind. 
+
+## Tech Stack: use latest best practices of every part of the tech stack below and ensure your generated code is future-proof.
+
 - **Frontend**: Remix, TypeScript, Zod, TailwindCSS
-- **Backend**: NodeJS V22.16+ LTS, ExpressJS, JWT for authentication, MongoDB Atlas (Mongoose)
-- **AI API**: OpenAI GPT-4 Chat API for generating summaries
+- **Backend**: NodeJS V21+ LTS, ExpressJS, JWT for authentication, MongoDB Atlas (Mongoose)
+- **AI API**: OpenAI GPT-4 Chat API or Google Gemini for Ai related tasks 
 - **Testing**: Jest + Supertest (commit test-first where practical)
 - **CI/CD**: Git, GitHub Actions, Docker-ready
 
 ## Development Approach
+
 - Work in incremental steps
 - Write tests first, generate code, run tests, update code until tests pass
 - Update README after each step
