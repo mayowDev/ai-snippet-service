@@ -89,33 +89,13 @@ export async function action({ request }: ActionFunctionArgs) {
     // Validate input with Zod
     const validatedData = createSnippetSchema.parse({ text, email });
 
-    // First, get a JWT token by logging in
-    const loginResponse = await fetch(
-      `${process.env.API_URL || "http://localhost:3000"}/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: validatedData.email }),
-      }
-    );
-
-    if (!loginResponse.ok) {
-      const errorData = await loginResponse.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to authenticate user");
-    }
-
-    const { token } = await loginResponse.json();
-
-    // Create the snippet with the JWT token
+    // Directly create the snippet (no login/JWT)
     const snippetResponse = await fetch(
       `${process.env.API_URL || "http://localhost:3000"}/snippets`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ text: validatedData.text }),
       }
