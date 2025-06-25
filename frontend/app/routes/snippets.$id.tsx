@@ -1,132 +1,79 @@
-import type { LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { Suspense, lazy } from "react";
+import type { Snippet } from "../types/types";
 
-interface Snippet {
-  id: string;
-  text: string;
-  summary: string;
-  createdAt: string;
-  createdBy?: string;
-}
+// Lazy load components for better performance
+const SnippetDetail = lazy(() => import("../components/SnippetDetail"));
+const LoadingSpinner = lazy(() => import("../components/LoadingSpinner"));
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const { id } = params;
 
   if (!id) {
-    throw new Response("Not Found", { status: 404 });
+    throw new Response("Snippet ID is required", { status: 400 });
   }
 
   try {
     const response = await fetch(
-      `${process.env.API_URL || "http://localhost:3000"}/snippets/${id}`
+      `${process.env.API_URL || "http://localhost:3000"}/snippets/${id}`,
+      {
+        // Add cache control for better performance
+        headers: {
+          'Cache-Control': 'public, max-age=300, s-maxage=600',
+        },
+      }
     );
 
     if (!response.ok) {
       if (response.status === 404) {
-        throw new Response("Not Found", { status: 404 });
+        throw new Response("Snippet not found", { status: 404 });
       }
-      throw new Error("Failed to fetch snippet");
+      throw new Response(`Failed to fetch snippet: ${response.status}`, { 
+        status: response.status 
+      });
     }
 
     const snippet: Snippet = await response.json();
-    return json({ snippet });
+    return { snippet };
   } catch (error) {
     console.error("Error fetching snippet:", error);
-    throw new Response("Not Found", { status: 404 });
+    if (error instanceof Response) {
+      throw error;
+    }
+    throw new Response("Failed to fetch snippet", { status: 500 });
   }
 }
 
-export default function SnippetDetail() {
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  if (!data?.snippet) {
+    return [
+      { title: "Snippet Not Found - AI Snippet Service" },
+      { name: "description", content: "The requested snippet could not be found." },
+    ];
+  }
+
+  return [
+    { title: `Snippet Details - AI Snippet Service` },
+    { name: "description", content: data.snippet.summary },
+    { property: "og:title", content: "Snippet Details" },
+    { property: "og:description", content: data.snippet.summary },
+    { property: "og:type", content: "article" },
+    { name: "twitter:card", content: "summary" },
+    { name: "twitter:title", content: "Snippet Details" },
+    { name: "twitter:description", content: data.snippet.summary },
+  ];
+};
+
+export default function SnippetDetailPage() {
   const { snippet } = useLoaderData<typeof loader>();
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <a
-            href="/"
-            className="inline-flex items-center text-indigo-600 hover:text-indigo-500 font-medium"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Back to Snippets
-          </a>
-        </div>
-
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="px-4 py-5 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Snippet Details
-                </h1>
-                <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                  Created on {new Date(snippet.createdAt).toLocaleDateString()}
-                  {snippet.createdBy && (
-                    <span className="ml-2">by {snippet.createdBy}</span>
-                  )}
-                </p>
-              </div>
-              <div className="flex space-x-3">
-                <a
-                  href="/"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Create New
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200">
-            <dl>
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">
-                  Original Text
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <div className="max-h-[400px] overflow-y-auto  bg-white p-4 rounded-md border border-gray-200">
-                    <p className="whitespace-pre-wrap">{snippet.text}</p>
-                  </div>
-                </dd>
-              </div>
-
-              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">
-                  AI Summary
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <div className="bg-indigo-50 p-4 rounded-md border border-indigo-200">
-                    <p className="text-indigo-900 font-medium">
-                      {snippet.summary}
-                    </p>
-                  </div>
-                </dd>
-              </div>
-
-              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">
-                  Snippet ID
-                </dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                    {snippet.id}
-                  </code>
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
+        <Suspense fallback={<LoadingSpinner />}>
+          <SnippetDetail snippet={snippet} />
+        </Suspense>
       </div>
     </div>
   );

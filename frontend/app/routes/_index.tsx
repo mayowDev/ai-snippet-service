@@ -3,30 +3,20 @@ import type {
   LoaderFunctionArgs,
   ActionFunctionArgs,
 } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import {
   Form,
   useActionData,
   useLoaderData,
   useNavigation,
 } from "@remix-run/react";
+import { Suspense, lazy } from "react";
 import { z } from "zod";
+import type { Snippet, ActionData } from "../types/types";
 
-interface Snippet {
-  id: string;
-  text: string;
-  summary: string;
-  createdAt: string;
-  createdBy?: string;
-}
-
-interface ActionData {
-  error?: string;
-  fieldErrors?: {
-    text?: string;
-    email?: string;
-  };
-}
+// Lazy load components for better performance
+const SnippetList = lazy(() => import("../components/SnippetList"));
+const CreateSnippetForm = lazy(() => import("../components/CreateSnippetForm"));
 
 const createSnippetSchema = z.object({
   text: z
@@ -36,18 +26,56 @@ const createSnippetSchema = z.object({
   email: z.string().email("Please provide a valid email address"),
 });
 
+// Error boundary component
+function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          Something went wrong
+        </h2>
+        <p className="text-gray-600 mb-4">{error.message}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Loading component
+function LoadingSpinner() {
+  return (
+    <div className="flex justify-center items-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+}
+
 export async function loader({ request }: LoaderFunctionArgs) {
   try {
     const response = await fetch(
-      `${process.env.API_URL || "http://localhost:3000"}/snippets`
+      `${process.env.API_URL || "http://localhost:3000"}/snippets`,
+      {
+        // Add cache control for better performance
+        headers: {
+          'Cache-Control': 'public, max-age=60, s-maxage=300',
+        },
+      }
     );
+    
     if (!response.ok) {
-      throw new Error("Failed to fetch snippets");
+      throw new Error(`Failed to fetch snippets: ${response.status}`);
     }
+    
     const snippets: Snippet[] = await response.json();
     return { snippets };
   } catch (error) {
     console.error("Error fetching snippets:", error);
+    // Return empty array instead of throwing to prevent full page crash
     return { snippets: [] };
   }
 }
@@ -74,7 +102,8 @@ export async function action({ request }: ActionFunctionArgs) {
     );
 
     if (!loginResponse.ok) {
-      throw new Error("Failed to authenticate user");
+      const errorData = await loginResponse.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to authenticate user");
     }
 
     const { token } = await loginResponse.json();
@@ -93,12 +122,16 @@ export async function action({ request }: ActionFunctionArgs) {
     );
 
     if (!snippetResponse.ok) {
-      const errorData = await snippetResponse.json();
-      return json({
+      const errorData = await snippetResponse.json().catch(() => ({}));
+      return new Response(
+        JSON.stringify({
           error: errorData.message || "Failed to create snippet",
           fieldErrors: {},
-        },
-        { status: 400 }
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
@@ -112,26 +145,37 @@ export async function action({ request }: ActionFunctionArgs) {
           fieldErrors[err.path[0] as string] = err.message;
         }
       });
-      return json({ error: "Validation failed", fieldErrors }, { status: 400 });
+      return new Response(
+        JSON.stringify({ error: "Validation failed", fieldErrors }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    return json(
-      {
+    return new Response(
+      JSON.stringify({
         error:
           error instanceof Error
             ? error.message
             : "An unexpected error occurred",
         fieldErrors: {},
-      },
-      { status: 500 }
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 }
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
+    { title: "AI Snippet Service - Create and Manage Snippets" },
+    { name: "description", content: "Create AI-powered summaries of your text with our advanced snippet service. Fast, secure, and easy to use." },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
+    { name: "theme-color", content: "#4f46e5" },
   ];
 };
 
@@ -144,160 +188,18 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12">
       <div className="w-full max-w-4xl space-y-12 px-4 sm:px-6 lg:px-8">
-        {/* --- Create Snippet Form --- */}
-        <div className="bg-white shadow-lg rounded-lg p-6 md:p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
-            AI Snippet Service
-          </h1>
-          <p className="text-lg text-gray-600 mb-6 text-center">
-            Paste your raw text below and get an AI-powered summary instantly.
-          </p>
+        {/* Create Snippet Form */}
+        <Suspense fallback={<LoadingSpinner />}>
+          <CreateSnippetForm 
+            actionData={actionData} 
+            isSubmitting={isSubmitting} 
+          />
+        </Suspense>
 
-          {actionData?.error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-800">{actionData.error}</p>
-            </div>
-          )}
-
-          <Form method="post" noValidate className="space-y-6">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Your Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
-                  actionData?.fieldErrors?.email
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }`}
-                placeholder="you@example.com"
-              />
-              {actionData?.fieldErrors?.email && (
-                <p className="mt-1 text-sm text-red-600">
-                  {actionData.fieldErrors.email}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="text"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Text to Summarize
-              </label>
-              <textarea
-                id="text"
-                name="text"
-                rows={8}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${
-                  actionData?.fieldErrors?.text
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }`}
-                placeholder="Paste your raw text here (blog post, transcript, article, etc.)..."
-              />
-              {actionData?.fieldErrors?.text && (
-                <p className="mt-1 text-sm text-red-600">
-                  {actionData.fieldErrors.text}
-                </p>
-              )}
-            </div>
-
-            <div className="text-right">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Creating..." : "Create Snippet"}
-              </button>
-            </div>
-          </Form>
-        </div>
-
-        {/* --- Recent Snippets List --- */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <div className="px-4 py-5 sm:px-6">
-            <h2 className="text-lg leading-6 font-medium text-gray-900">
-              Recent Snippets
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Latest AI-generated summaries
-            </p>
-          </div>
-
-          {snippets.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No snippets found</p>
-              <p className="text-gray-400 mt-2">
-                Create your first snippet to get started
-              </p>
-            </div>
-          ) : (
-            <div className="max-h-96 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <ul className="divide-y divide-gray-200">
-                {snippets.map((snippet) => (
-                  <li key={snippet.id}>
-                    <a
-                      href={`/snippets/${snippet.id}`}
-                      className="block hover:bg-gray-50 transition-colors duration-150"
-                    >
-                      <div className="px-4 py-4 sm:px-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-indigo-600 truncate">
-                              {snippet.text.length > 100
-                                ? `${snippet.text.substring(0, 100)}...`
-                                : snippet.text}
-                            </p>
-                            <p className="mt-1 text-sm text-gray-600">
-                              {snippet.summary}
-                            </p>
-                            <div className="mt-2 flex items-center text-xs text-gray-500">
-                              <span>
-                                Created:{" "}
-                                {
-                                  new Date(snippet.createdAt)
-                                    .toISOString()
-                                    .split("T")[0]
-                                }
-                              </span>
-                              {snippet.createdBy && (
-                                <span className="ml-4">
-                                  By: {snippet.createdBy}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="ml-4 flex-shrink-0">
-                            <svg
-                              className="h-5 w-5 text-gray-400"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        {/* Recent Snippets List */}
+        <Suspense fallback={<LoadingSpinner />}>
+          <SnippetList snippets={snippets} />
+        </Suspense>
       </div>
     </div>
   );
