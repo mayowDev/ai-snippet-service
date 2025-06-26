@@ -19,7 +19,7 @@ describe("Express Server", () => {
 
   describe("Server Setup", () => {
     test("should respond to health check endpoint", async () => {
-      const response = await request(app).get("/health").expect(200);
+      const response = await request(app).get("/").expect(200);
 
       expect(response.body).toHaveProperty("status", "OK");
       expect(response.body).toHaveProperty(
@@ -31,8 +31,8 @@ describe("Express Server", () => {
 
     test("should have CORS enabled", async () => {
       const response = await request(app)
-        .get("/health")
-        .set("Origin", "http://localhost:3030")
+        .get("/")
+        .set("Origin", "http://localhost:3000")
         .expect(200);
 
       expect(response.headers["access-control-allow-origin"]).toBeDefined();

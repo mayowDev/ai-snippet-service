@@ -3,9 +3,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { connectDatabase } = require("./config/database");
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 let mongoConnected = false;
 let snippetCache = [];
 
@@ -38,16 +39,7 @@ app.use("*", (req, res) => {
 });
 
 // Global error handler
-app.use((error, req, res, next) => {
-  console.error("Unhandled error:", error);
-  res.status(500).json({
-    error: "Internal server error",
-    message:
-      process.env.NODE_ENV === "development"
-        ? error.message
-        : "Something went wrong",
-  });
-});
+app.use(errorHandler);
 
 // Start server
 const startServer = async () => {
@@ -62,31 +54,6 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-
-// Handle graceful shutdown
-process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, shutting down gracefully");
-  try {
-    await mongoose.connection.close();
-    console.log("MongoDB connection closed");
-    process.exit(0);
-  } catch (err) {
-    console.error("Error closing MongoDB connection:", err);
-    process.exit(1);
-  }
-});
-
-process.on("SIGINT",async () => {
-  console.log("SIGINT received, shutting down gracefully");
-  try {
-    await mongoose.connection.close();
-    console.log("MongoDB connection closed");
-    process.exit(0);
-  } catch (err) {
-    console.error("Error closing MongoDB connection:", err);
-    process.exit(1);
-  }
-});
 
 module.exports = app;
 

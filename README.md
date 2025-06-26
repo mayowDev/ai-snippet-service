@@ -32,6 +32,9 @@ A Node.js Express API service that generates AI-powered summaries from raw text 
 - **Caching**: Avoid duplicate AI processing for similar text
 - **RESTful API**: Clean, well-documented endpoints
 - **Docker Support**: Containerized deployment with test-first approach
+- **Centralized Health Check**: The root `/` route now serves as the health check endpoint
+- **Single Database Connection Utility**: All database connections use a single shared utility for maintainability
+- **Modular, DRY Backend**: Business logic is in service modules, cross-cutting concerns use middleware, and response formatting is handled by utility functions
 
 ### Tech Stack
 
@@ -54,11 +57,12 @@ A Node.js Express API service that generates AI-powered summaries from raw text 
 ai-snippet-service/
 ├── src/                  # Backend (to be moved to /backend)
 │   ├── __tests__/        # Backend tests
-│   ├── config/           # Database configuration
-│   ├── middleware/       # Rate limiting, validation
+│   ├── config/           # Database configuration (single connectDatabase utility)
+│   ├── middleware/       # Rate limiting, validation, error handling
 │   ├── models/           # Mongoose models
-│   ├── routes/           # Express routes
-│   └── services/         # AI service
+│   ├── routes/           # Express routes (thin, call service layer)
+│   ├── services/         # Business logic (e.g., snippetService.js)
+│   └── utils/            # Response helpers and other utilities
 ├── frontend/             # Remix frontend app
 │   ├── app/              # Remix routes and components
 │   ├── cypress/          # E2E tests
@@ -286,7 +290,7 @@ docker-compose up --build --force-recreate
 
 #### Health Check
 
-- **GET** `/health` - Server health status
+- **GET** `/` - Server health status (now at root; `/health` removed)
 
 #### Create a Snippet (POST /snippets)
 
@@ -531,6 +535,11 @@ The API supports a fallback mode if MongoDB is down:
 5. **Docker & Containerization**: Production and development images, test-first approach
 6. **User Authentication & Rate Limiting**: Email-based auth, rate limiting, quota management
 7. **Frontend Implementation**: Remix app with TailwindCSS, TypeScript, Zod integration
+8. **Backend Refactor for Modularity & Reusability**: 
+   - Removed duplicate database connection logic (now using a single shared connectDatabase utility)
+   - The root `/` route is now the health check endpoint (removed `/health`)
+   - All business logic is in service modules, cross-cutting concerns use middleware, and response formatting is handled by utility functions
+   - **Centralized MongoDB shutdown logic**: Graceful shutdown and connection closing is now handled only in the database config, not duplicated in index.js
 
 #### 🔄 Next Steps
 
