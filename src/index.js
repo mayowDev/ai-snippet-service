@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const { connectDatabase } = require("./config/database");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -48,27 +49,10 @@ app.use((error, req, res, next) => {
   });
 });
 
-// MongoDB Connection
-const connectDB = async () => {
-  try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error("MONGODB_URI environment variable is required");
-    }
-
-    await mongoose.connect(process.env.MONGODB_URI);
-    mongoConnected = true;
-    console.log("MongoDB connected successfully");
-  } catch (error) {
-    mongoConnected = false;
-    console.error("MongoDB connection error:", error.message);
-    // process.exit(1);
-  }
-};
-
 // Start server
 const startServer = async () => {
   try {
-    await connectDB();
+    await connectDatabase();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -102,8 +86,6 @@ process.on("SIGINT",async () => {
     process.exit(1);
   }
 });
-
-
 
 module.exports = app;
 
