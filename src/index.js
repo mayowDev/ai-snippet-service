@@ -16,8 +16,8 @@ const snippetRoutes = require("./routes/snippets");
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
-app.get("/health", (req, res) => {
+// Health check endpoint (at root)
+app.get("/", (req, res) => {
   res.status(200).json({
     status: "OK",
     dbConnected: mongoConnected,
@@ -52,8 +52,9 @@ app.use((error, req, res, next) => {
 // Start server
 const startServer = async () => {
   try {
-    await connectDatabase();
-    app.listen(PORT, () => {
+    mongoConnected =  await connectDatabase();
+
+   app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {

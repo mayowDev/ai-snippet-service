@@ -26,9 +26,8 @@ const connectDatabase = async () => {
     };
 
     console.log(
-      `Connecting to database: ${uri.split("/").pop().split("?")[0]}`
+      `Connecting to database: ${uri.split("/").pop().split("?")[1].split("=")[3]}`
     );
-
     await mongoose.connect(uri, options);
 
     console.log("Database connected successfully");
@@ -48,9 +47,10 @@ const connectDatabase = async () => {
       console.log("Database connection closed through app termination");
       process.exit(0);
     });
+    return true;
   } catch (error) {
     console.error("Failed to connect to database:", error);
-    throw error;
+    return false;
   }
 };
 
